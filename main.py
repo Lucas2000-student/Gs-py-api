@@ -41,25 +41,26 @@ def katia():
 # Rota para criar uma nova tarefa (ID gerado automaticamente no backend Python)
 @app.post("/usuario", response_model=Usuario)
 def criar_usuario(usuario: UsuarioCreate):
-    global proximo_id
-    proximo_id += 1
-    nova_usuario = Usuario(id_usuario=proximo_id, **usuario.dict())
-
-
+    # Conecta no banco
     dsn = oracledb.makedsn(host=DB_HOST, port=DB_PORT, sid=DB_SID)
     conn = oracledb.connect(user=DB_USER, password=DB_PASS, dsn=dsn)
-
-
     cursor = conn.cursor()
 
+    # Busca o maior ID atual
+    cursor.execute("SELECT MAX(ID_USUARIO) FROM T_UFS_USUARIO")
+    max_id = cursor.fetchone()[0]
+    novo_id = (max_id or 0) + 1  # Se for None, começa do 1
 
-    cursor.execute("INSERT INTO T_UFS_USUARIO (ID_USUARIO, NOME, SENHA, ULTIMO_LOGIN, CARGO) VALUES (:valor1, :valor2, :valor3, :valor4, :valor5)", valor1=nova_usuario.id_usuario, valor2=nova_usuario.nome, valor3=nova_usuario.senha, valor4=nova_usuario.ultimo_login, valor5=nova_usuario.cargo)
+    # Cria o novo usuário com o ID correto
+    nova_usuario = Usuario(id_usuario=novo_id, **usuario.dict())
+
+    # Executa o INSERT
+    cursor.execute("INSERT INTO T_UFS_USUARIO (ID_USUARIO, NOME, SENHA, ULTIMO_LOGIN, CARGO)VALUES (:valor1, :valor2, :valor3, :valor4, :valor5)", valor1=nova_usuario.id_usuario, valor2=nova_usuario.nome, valor3=nova_usuario.senha, valor4=nova_usuario.ultimo_login, valor5=nova_usuario.cargo)
+
+    # Commit e encerra
     conn.commit()
-
-
     cursor.close()
     conn.close()
-
 
     return nova_usuario    
    
@@ -132,7 +133,7 @@ def atualizar_manutencao(usuario_id_usuario: int, nova_usuario: UsuarioCreate):
 
     cursor = conn.cursor()
 
-    cursor.execute("UPDATE T_UFS_USUARIO SET NOME=:valor2, SENHA=:valor3, ULTIMO_LOGIN=valor4, CARGO=:valor5 WHERE: ID_USUARIO=:valor1",valor1=usuario_id_usuario, valor2=nova_usuario.nome, valor3=nova_usuario.senha, valor4=nova_usuario.ultimo_login, valor5=nova_usuario.cargo)
+    cursor.execute("UPDATE T_UFS_USUARIO SET NOME=:valor2, SENHA=:valor3, ULTIMO_LOGIN=:valor4, CARGO=:valor5 WHERE ID_USUARIO=:valor1", valor1=usuario_id_usuario, valor2=nova_usuario.nome, valor3=nova_usuario.senha, valor4=nova_usuario.ultimo_login, valor5=nova_usuario.cargo)
     conn.commit()
 
 
